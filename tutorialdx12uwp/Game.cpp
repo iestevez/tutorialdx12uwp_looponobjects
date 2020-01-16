@@ -32,6 +32,7 @@ void Game::Initialize(::IUnknown* window, int width, int height, DXGI_MODE_ROTAT
 
     // Inicializamos un par de objectos
     ObjectData o;
+    objects.clear();
     XMStoreFloat4x4(&o.m_world, XMMatrixTranslation(0, 0, 0));
     objects.push_back(o);
     XMStoreFloat4x4(&o.m_world, XMMatrixTranslation(3, 0, 0));
@@ -115,9 +116,6 @@ void Game::Update(DX::StepTimer const& timer)
         ++count;
     }
 
-    // Actualización del buffer de constantes
-
-   
     
     if (m_vConstantBuffer[m_backBufferIndex] != nullptr)
         m_vConstantBuffer[m_backBufferIndex]->Unmap(0, nullptr);
@@ -787,7 +785,7 @@ void Game::CreateMainInputFlowResources(const Mesh& mesh) {
     // El buffer de constantes para el shader de vértices
 
     /* Tarea 1: Crear el buffer en un heap upload*/
-    unsigned int elementSize = CalcConstantBufferByteSize(objects.size()*sizeof(vConstants));
+    unsigned int elementSize = CalcConstantBufferByteSize(sizeof(vConstants));
 
     for (int i = 0; i < c_swapBufferCount; i++) {
         m_d3dDevice->CreateCommittedResource(
@@ -827,16 +825,15 @@ void Game::CreateMainInputFlowResources(const Mesh& mesh) {
     );
     m_cDescriptorSize = m_d3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
     for (int i = 0; i < c_swapBufferCount; i++) {
+        D3D12_GPU_VIRTUAL_ADDRESS cAddress = m_vConstantBuffer[i]->GetGPUVirtualAddress();
         for (UINT j = 0; j < objects.size(); j++) {
-            D3D12_GPU_VIRTUAL_ADDRESS cAddress = m_vConstantBuffer[i]->GetGPUVirtualAddress();
-            cAddress += j * elementSize;
+           
             D3D12_CONSTANT_BUFFER_VIEW_DESC cDescriptor;
             cDescriptor.BufferLocation = cAddress;
             cDescriptor.SizeInBytes = elementSize;
-
-            // Creamos el descriptor y lo colocamos al principio del heap de descriptores.
             m_d3dDevice->CreateConstantBufferView(&cDescriptor, hDescriptor);
             hDescriptor.Offset(1, m_cDescriptorSize);
+            cAddress += elementSize;
         }
     }
     /* Tarea 5 Creamos un descriptor SRV para la textura*/
