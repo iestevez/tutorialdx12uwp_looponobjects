@@ -25,9 +25,6 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="HelperFunctions.h" />
     <ClInclude Include="DDSTextureLoader.h" />
-    <ClInclude Include="d3dx12.h">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
