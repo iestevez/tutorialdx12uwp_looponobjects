@@ -649,6 +649,9 @@ void Game::OnDeviceLost()
 }
 
 void Game::CreateMainInputFlowResources(const Mesh& mesh) {
+    /* Aux. variables*/
+    D3D12_HEAP_PROPERTIES heapProperties;
+    D3D12_RESOURCE_DESC resourceDesc;
 
     /*
     Objetivo 1.
@@ -664,39 +667,45 @@ void Game::CreateMainInputFlowResources(const Mesh& mesh) {
     /*Tarea 1: Creación de los buffers.*/
 
     // Creación de los buffers default y upload para los vértices
+    heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh.GetVSize());
     DX::ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
-        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+        &heapProperties,
         D3D12_HEAP_FLAG_NONE,
-        &CD3DX12_RESOURCE_DESC::Buffer(mesh.GetVSize()),
+        &resourceDesc,
         D3D12_RESOURCE_STATE_COMMON,
         nullptr,
         IID_PPV_ARGS(m_vBufferDefault.GetAddressOf())));
 
-    // Ahora un buffer upload, de esta forma tenemos un puente upload para pasar a default.
 
+    // Ahora un buffer upload, de esta forma tenemos un puente upload para pasar a default.
+    heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     DX::ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
-        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+        &heapProperties,
         D3D12_HEAP_FLAG_NONE,
-        &CD3DX12_RESOURCE_DESC::Buffer(mesh.GetVSize()),
+        &resourceDesc,
         D3D12_RESOURCE_STATE_GENERIC_READ,
         nullptr,
         IID_PPV_ARGS(m_vBufferUpload.GetAddressOf())));
 
     // Creación de los buffers default y upload para los índices
+
+    heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT);
+    resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(mesh.GetISize());
     DX::ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
-        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_DEFAULT),
+        &heapProperties,
         D3D12_HEAP_FLAG_NONE,
-        &CD3DX12_RESOURCE_DESC::Buffer(mesh.GetISize()),
+        &resourceDesc,
         D3D12_RESOURCE_STATE_COMMON,
         nullptr,
         IID_PPV_ARGS(m_iBufferDefault.GetAddressOf())));
 
     // Ahora un buffer upload, de esta forma tenemos un puente upload para pasar a default.
-
+    heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
     DX::ThrowIfFailed(m_d3dDevice->CreateCommittedResource(
-        &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+        &heapProperties,
         D3D12_HEAP_FLAG_NONE,
-        &CD3DX12_RESOURCE_DESC::Buffer(mesh.GetISize()),
+        &resourceDesc,
         D3D12_RESOURCE_STATE_GENERIC_READ,
         nullptr,
         IID_PPV_ARGS(m_iBufferUpload.GetAddressOf())));
@@ -717,25 +726,24 @@ void Game::CreateMainInputFlowResources(const Mesh& mesh) {
     /*Tarea 3: Realizamos la transferencia desde el origen hasta el buffer DEFAULT pasando por el buffer UPLOAD*/
     /*Vértices*/
     // Cambio de estado en el recurso de destino
-    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
-        m_vBufferDefault.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
+    D3D12_RESOURCE_BARRIER barrier;
+    barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_vBufferDefault.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+    m_commandList->ResourceBarrier(1, &barrier);
 
     // Ordenamos la transferencia vertices
     UpdateSubresources<1>(m_commandList.Get(), m_vBufferDefault.Get(), m_vBufferUpload.Get(), 0, 0, 1, &origen_vertices);
     // Cambio de estado en el recurso de destino
-    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
-        m_vBufferDefault.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
-
+    barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_vBufferDefault.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+    m_commandList->ResourceBarrier(1, &barrier);
     /*Índices*/
     // Cambio de estado en el recurso de destino
-    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
-        m_iBufferDefault.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST));
-
+    barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_iBufferDefault.Get(), D3D12_RESOURCE_STATE_COMMON, D3D12_RESOURCE_STATE_COPY_DEST);
+    m_commandList->ResourceBarrier(1, &barrier);
     // Ordenamos la transferencia vertices
     UpdateSubresources<1>(m_commandList.Get(), m_iBufferDefault.Get(), m_iBufferUpload.Get(), 0, 0, 1, &origen_indices);
     // Cambio de estado en el recurso de destino
-    m_commandList->ResourceBarrier(1, &CD3DX12_RESOURCE_BARRIER::Transition(
-        m_iBufferDefault.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ));
+    barrier = CD3DX12_RESOURCE_BARRIER::Transition(m_iBufferDefault.Get(), D3D12_RESOURCE_STATE_COPY_DEST, D3D12_RESOURCE_STATE_GENERIC_READ);
+    m_commandList->ResourceBarrier(1, &barrier);
 
 
     /* Tarea 3: Establecemos una vista para vértices e índices*/
@@ -768,7 +776,7 @@ void Game::CreateMainInputFlowResources(const Mesh& mesh) {
 
     m_mesh.meshTexture = std::make_unique<Mesh::Texture>();
     m_mesh.meshTexture->Name = "tutorialTex";
-    m_mesh.meshTexture->Filename = L"tutorialtextura.dds";
+    m_mesh.meshTexture->Filename = L"Assets/tutorialtextura.dds";
     DX::ThrowIfFailed(DirectX::CreateDDSTextureFromFile12(m_d3dDevice.Get(), m_commandList.Get(),
         m_mesh.meshTexture->Filename.c_str(),
         m_mesh.meshTexture->Resource,
@@ -787,11 +795,13 @@ void Game::CreateMainInputFlowResources(const Mesh& mesh) {
     /* Tarea 1: Crear el buffer en un heap upload*/
     unsigned int elementSize = CalcConstantBufferByteSize(sizeof(vConstants));
 
+    heapProperties = CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD);
+    resourceDesc = CD3DX12_RESOURCE_DESC::Buffer(elementSize*objects.size());
     for (int i = 0; i < c_swapBufferCount; i++) {
         m_d3dDevice->CreateCommittedResource(
-            &CD3DX12_HEAP_PROPERTIES(D3D12_HEAP_TYPE_UPLOAD),
+            &heapProperties,
             D3D12_HEAP_FLAG_NONE,
-            &CD3DX12_RESOURCE_DESC::Buffer(elementSize*objects.size()),
+            &resourceDesc,
             D3D12_RESOURCE_STATE_GENERIC_READ,
             nullptr,
             IID_PPV_ARGS(m_vConstantBuffer[i].GetAddressOf())
