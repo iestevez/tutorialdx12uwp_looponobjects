@@ -8,6 +8,6 @@ Basic texture example with a Controller. Controller Extracted from:
 https://github.com/microsoft/Windows-universal-samples/tree/master/Samples/Simple3DGameDX
 
 Tested for:
-Windows SDK 10.0.17763
+Windows SDK 10.0.18362
 Visual Studio 16.8.2
 CL 19.28
